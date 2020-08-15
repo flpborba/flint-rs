@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, ops::Add};
 
 #[cfg(test)]
 mod tests;
@@ -63,7 +63,50 @@ impl Int {
     }
 }
 
+impl Add for &Int {
+    type Output = Int;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut sum = Int {
+            dgt: [0; Int::DIGITS],
+            len: cmp::min(cmp::max(self.len, rhs.len) + 1, Int::DIGITS),
+        };
+
+        let mut accum = 0;
+
+        for (s, (l, r)) in sum.dgt[..sum.len]
+            .iter_mut()
+            .zip(self.dgt.iter().zip(rhs.dgt.iter()))
+        {
+            accum += *l as u128 + *r as u128;
+            *s = accum as u64;
+
+            accum >>= Int::BITS_PER_DIGIT;
+        }
+
+        sum.remove_leading_zeros();
+        sum
+    }
+}
+
+impl Add<Int> for &Int {
+    type Output = Int;
+
+    fn add(self, rhs: Int) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl Add<&Int> for Int {
+    type Output = Int;
+
+    fn add(self, rhs: &Int) -> Self::Output {
+        &self + rhs
+    }
+}
+
 impl Int {
+    const BITS_PER_DIGIT: usize = 64;
     const DIGITS: usize = 32;
 
     fn remove_leading_zeros(&mut self) {
