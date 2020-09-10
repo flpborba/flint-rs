@@ -1,4 +1,7 @@
-use std::{cmp, ops::Add};
+use std::{
+    cmp,
+    ops::{Add, Sub},
+};
 
 #[cfg(test)]
 mod tests;
@@ -102,6 +105,63 @@ impl Add<&Int> for Int {
 
     fn add(self, rhs: &Int) -> Self::Output {
         &self + rhs
+    }
+}
+
+impl Sub for &Int {
+    type Output = Int;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        let overflow = self < rhs;
+        let lhs = if overflow { &Int::MAX } else { self };
+
+        let mut diff = Int {
+            dgt: [0; Int::DIGITS],
+            len: cmp::max(lhs.len, rhs.len),
+        };
+
+        let mut accum = 0;
+
+        for (d, (l, r)) in diff.dgt[..diff.len]
+            .iter_mut()
+            .zip(lhs.dgt.iter().zip(rhs.dgt.iter()))
+        {
+            accum = (accum >> Int::BITS_PER_DIGIT) & 1;
+            accum = (*l as u128).wrapping_sub(*r as u128 + accum);
+            *d = accum as u64;
+        }
+
+        if overflow {
+            diff.len = cmp::min(cmp::max(diff.len, self.len) + 1, Int::DIGITS);
+            accum = 1;
+
+            for (l, r) in diff.dgt.iter_mut().zip(self.dgt.iter()) {
+                accum += *l as u128 + *r as u128;
+                *l = accum as u64;
+
+                accum >>= Int::BITS_PER_DIGIT;
+            }
+
+            diff.remove_leading_zeros();
+        }
+
+        diff
+    }
+}
+
+impl Sub<Int> for &Int {
+    type Output = Int;
+
+    fn sub(self, rhs: Int) -> Self::Output {
+        self - &rhs
+    }
+}
+
+impl Sub<&Int> for Int {
+    type Output = Int;
+
+    fn sub(self, rhs: &Int) -> Self::Output {
+        &self - rhs
     }
 }
 
