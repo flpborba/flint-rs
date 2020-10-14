@@ -1,6 +1,6 @@
 use std::{
     cmp,
-    ops::{Add, Sub},
+    ops::{Add, Mul, Sub},
 };
 
 #[cfg(test)]
@@ -162,6 +162,51 @@ impl Sub<&Int> for Int {
 
     fn sub(self, rhs: &Int) -> Self::Output {
         &self - rhs
+    }
+}
+
+impl Mul for &Int {
+    type Output = Int;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        let mut prod = Int {
+            dgt: [0; Int::DIGITS],
+            len: cmp::min(Int::DIGITS, self.len + rhs.len),
+        };
+
+        for (i, l) in rhs.dgt[..rhs.len].iter().enumerate() {
+            let mut accum = 0;
+
+            for (p, r) in prod.dgt[i..].iter_mut().zip(self.dgt[..self.len].iter()) {
+                accum += *p as u128 + *l as u128 * *r as u128;
+                *p = accum as u64;
+
+                accum >>= Int::BITS_PER_DIGIT;
+            }
+
+            if let Some(p) = prod.dgt.get_mut(i + self.len) {
+                *p = accum as u64;
+            }
+        }
+
+        prod.remove_leading_zeros();
+        prod
+    }
+}
+
+impl Mul<Int> for &Int {
+    type Output = Int;
+
+    fn mul(self, rhs: Int) -> Self::Output {
+        self * &rhs
+    }
+}
+
+impl Mul<&Int> for Int {
+    type Output = Int;
+
+    fn mul(self, rhs: &Int) -> Self::Output {
+        &self * rhs
     }
 }
 
