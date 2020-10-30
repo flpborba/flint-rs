@@ -64,6 +64,57 @@ impl Int {
         value.remove_leading_zeros();
         value
     }
+
+    /// Calculates `self * self`.
+    pub fn square(&self) -> Self {
+        let mut sq = Int {
+            dgt: [0; Self::DIGITS],
+            len: cmp::min(2 * self.len, Self::DIGITS),
+        };
+
+        for (i, l) in self.dgt[..sq.len / 2].iter().enumerate() {
+            let mut accum = 0;
+
+            for (s, r) in sq.dgt[2 * i + 1..sq.len]
+                .iter_mut()
+                .zip(self.dgt[i + 1..].iter())
+            {
+                accum += *s as u128 + *l as u128 * *r as u128;
+                *s = accum as u64;
+
+                accum >>= Int::BITS_PER_DIGIT;
+            }
+
+            if let Some(s) = sq.dgt.get_mut(self.len + i) {
+                *s = accum as u64;
+            }
+        }
+
+        let mut accum = 0;
+
+        for s in sq.dgt[..sq.len].iter_mut().skip(1) {
+            accum += *s as u128 * 2;
+            *s = accum as u64;
+
+            accum >>= Int::BITS_PER_DIGIT;
+        }
+
+        let mut accum = 0;
+
+        for (chunk, l) in sq.dgt[..sq.len].chunks_exact_mut(2).zip(self.dgt.iter()) {
+            accum += *l as u128 * *l as u128;
+
+            for s in chunk.iter_mut() {
+                accum += *s as u128;
+                *s = accum as u64;
+
+                accum >>= Self::BITS_PER_DIGIT;
+            }
+        }
+
+        sq.remove_leading_zeros();
+        sq
+    }
 }
 
 impl Add for &Int {
